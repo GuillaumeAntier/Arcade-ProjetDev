@@ -1,5 +1,6 @@
 from player import Player
 from screenManager import ScreenManager
+from database import Database
 
 
 class Game:
