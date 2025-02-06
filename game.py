@@ -1,4 +1,5 @@
 from player import Player
+from screenManager import ScreenManager
 
 
 class Game:
@@ -6,6 +7,8 @@ class Game:
     def __init__(self):
         self.board = ScreenManager()
         self.players = [Player('1'), Player('2')]
+        self.scores = []
+        self.current_screen = "main_menu"
 
     def run(self):
         return
