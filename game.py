@@ -1,4 +1,6 @@
 from player import Player
+from screenManager import ScreenManager
+import pygame
 
 
 class Game:
@@ -8,7 +10,7 @@ class Game:
         self.players = [Player('1'), Player('2')]
 
     def run(self):
-        return
+        pygame.init()
 
     def handle_events(self):
         return
