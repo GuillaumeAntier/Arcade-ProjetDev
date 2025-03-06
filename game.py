@@ -5,32 +5,21 @@ import serial
 import re
 import os
 
-# Define layers directly in game.py
-layers = [
-    [
-        [0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 1, 0, 0, 0, 0, 0, 1, 0],
-        [0, 1, 0, 0, 0, 0, 0, 1, 0],
-        [0, 1, 0, 0, 0, 0, 0, 1, 0],
-        [0, 1, 0, 0, 0, 0, 0, 1, 0],
-        [0, 1, 0, 0, 0, 0, 0, 1, 0],
-        [0, 1, 0, 0, 0, 0, 0, 1, 0],
-        [0, 1, 0, 0, 0, 0, 0, 1, 0],
-        [0, 1, 0, 0, 0, 0, 0, 1, 0],
-    ],
-    # ... (rest of the layers)
-]
-
 class Game:
 
     def __init__(self):
         pygame.init()  
         self.screen = pygame.display.set_mode((1000, 1000)) 
         self.board = ScreenManager()
-        self.players = [Player('1')]
+        self.players = [Player('1'), Player('2')]
         self.scores = []
         self.current_screen = "main_menu"
-        self.arduino = serial.Serial(port="COM7", baudrate=9600, timeout=1)
+        
+        try:
+            self.arduino = serial.Serial(port="COM7", baudrate=9600, timeout=1)
+        except serial.SerialException as e:
+            print(f"Erreur de connexion au port série : {e}")
+            exit(1)  # Quittez le programme si la connexion échoue
 
     def read_joystick(self):
         if self.arduino.in_waiting > 0:
@@ -55,10 +44,26 @@ class Game:
                 if event.type == pygame.QUIT:
                     running = False
             
+            # Gérer les entrées du clavier pour le deuxième tank
+            keys = pygame.key.get_pressed()  # Récupérer l'état des touches
+            if keys[pygame.K_UP]:  # Touche pour avancer
+                self.players[1].position[1] -= self.players[1].movement_speed * 2
+            if keys[pygame.K_DOWN]:  # Touche pour reculer
+                self.players[1].position[1] += self.players[1].movement_speed * 2
+            if keys[pygame.K_LEFT]:  # Touche pour tourner à gauche
+                self.players[1].angle += self.players[1].rotation_speed
+            if keys[pygame.K_RIGHT]:  # Touche pour tourner à droite
+                self.players[1].angle -= self.players[1].rotation_speed
+
+            # Mettre à jour les tanks
             for player in self.players:
                 player.update(joystick_data)  
 
-            self.screen.fill((0, 0, 0))  
+                # Mettre à jour les balles
+                for bullet in player.bullets:
+                    bullet.update()  # Mettre à jour la position de chaque balle
+
+            self.screen.fill((10, 10, 10))  
             for player in self.players:
                 player.render(self.screen) 
             pygame.display.flip()  
