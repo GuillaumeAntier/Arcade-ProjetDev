@@ -1,14 +1,16 @@
 import pygame, sys
 import pygame_widgets
+import pygame.mixer as music
 from pygame_widgets.slider import Slider
 from pygame_widgets.textbox import TextBox
+
 
 class ScreenManager:
     
     def __init__(self):
         pygame.init()
         pygame.display.set_caption('Game')
-        self.screen = pygame.display.set_mode((800, 600))
+        self.screen = pygame.display.set_mode((1920, 1080))
         self.font = pygame.font.SysFont(None, 40)
         self.clock = pygame.time.Clock()
         self.running = True
@@ -82,52 +84,11 @@ class ScreenManager:
         self.draw_text("Options", 20, 20)
 
         mx, my = pygame.mouse.get_pos()
-        audio_button = self.draw_button("Audio", 50, 100, 200, 50)
-        video_button = self.draw_button("Video", 50, 200, 200, 50)
+
         back_button = self.draw_button("Back", 50, 500, 200, 50)
 
-        if self.click:
-            if audio_button.collidepoint(mx, my):
-                self.current_screen = "audio"
-            elif video_button.collidepoint(mx, my):
-                self.current_screen = "video"
-            elif back_button.collidepoint(mx, my):
-                self.current_screen = "main_menu"
-    
-    def video_settings(self):
-        self.draw_text("Video Settings", 20, 20)
-
-        mx, my = pygame.mouse.get_pos()
-
-        resulution_button_1 = self.draw_button("384x216", 50, 100, 200, 50)
-        resulution_button_2 = self.draw_button("768x432", 50, 200, 200, 50)
-        resulution_button_3 = self.draw_button("1152x648", 50, 300, 200, 50)
-        resulution_button_4 = self.draw_button("1536x864", 50, 400, 200, 50)
-        resulution_button_5 = self.draw_button("1920x1080", 50, 500, 200, 50)
-        full_screen_button = self.draw_button("Full Screen", 300, 500, 200, 50)
-        back_button = self.draw_button("Back", 50, 500, 200, 50)
-
-        if self.click:
-            if resulution_button_1.collidepoint(mx, my):
-                self.screen = pygame.display.set_mode((384, 216))
-            elif resulution_button_2.collidepoint(mx, my):
-                self.screen = pygame.display.set_mode((768, 432))
-            elif resulution_button_3.collidepoint(mx, my):
-                self.screen = pygame.display.set_mode((1152, 648))
-            elif resulution_button_4.collidepoint(mx, my):
-                self.screen = pygame.display.set_mode((1536, 864))
-            elif resulution_button_5.collidepoint(mx, my):
-                self.screen = pygame.display.set_mode((1920, 1080))
-            elif full_screen_button.collidepoint(mx, my):
-                self.screen = pygame.display.set_mode((1920, 1080), pygame.FULLSCREEN)
-            elif back_button.collidepoint(mx, my):
-                self.current_screen = "options"
-            
-
-    def audio_settings(self):
-        self.draw_text("Audio Settings", 20, 20)
-
-        self.main_volume_text.setText(f"Main: {self.main_volume_slider.getValue()}%")
+        self.draw_text("Audio", 50, 100)
+        self.main_volume_text.setText(f"Master: {self.main_volume_slider.getValue()}%")
         self.music_volume_text.setText(f"Music: {self.music_volume_slider.getValue()}%")
 
         self.main_volume_slider.draw()
@@ -136,16 +97,12 @@ class ScreenManager:
         self.main_volume_text.draw()
         self.music_volume_text.draw()
 
-        mx, my = pygame.mouse.get_pos()
-
         if self.click:
-            self.main_volume = int(self.main_volume_slider.getValue())
-            self.music_volume = int(self.music_volume_slider.getValue())
-        
-        back_button = self.draw_button("Back", 50, 500, 200, 50)
-
-        if self.click and back_button.collidepoint(mx, my):
-            self.current_screen = "options"
+            if back_button.collidepoint(mx, my):
+                self.current_screen = "main_menu"
+            else:
+                self.main_volume = int(self.main_volume_slider.getValue())
+                self.music_volume = int(self.music_volume_slider.getValue())
 
         pygame_widgets.update(pygame.event.get())
 
