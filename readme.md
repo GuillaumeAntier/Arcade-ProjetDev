@@ -1,77 +1,72 @@
-🎮 Borne d'Arcade - 1 VS 1
+# Tank Battle Game
 
-Bienvenue sur le dépôt du projet Borne d'Arcade ! Ce projet consiste à créer une mini borne d'arcade avec un jeu 1 contre 1, utilisant une Raspberry Pi, des boutons et un joystick. 🕹️
+A two-player tank battle game with predefined maps.
 
-🚀 Fonctionnalités
+## Features
 
-🏆 Menu principal : accès aux autres écrans et présentation des meilleurs scores
+- Two-player tank combat
+- Multiple predefined maps
+- Randomly selected map at game start
+- Map obstacles for strategic gameplay
+- Support for both Arduino joysticks and keyboard controls
 
-🎮 Écran de jeu : combat en 1v1 avec joystick et boutons
+## Controls
 
-🏁 Écran de fin de partie : affichage du gagnant et son score
+### Arduino Joysticks
+- Joystick 1: Controls Player 1's tank
+- Joystick 2: Controls Player 2's tank
+- Button A: Fire
+- Button B: Not used currently
 
-📜 Écran d'instructions : explication des commandes et règles du jeu
+### Keyboard Controls (when Arduino is not connected)
+#### Player 1:
+- W, A, S, D: Move tank
+- Space: Fire
+- Q: Not used currently
 
-⚙️ Écran d'options : personnalisation des statistiques des joueurs
+#### Player 2:
+- Arrow keys: Move tank
+- Enter: Fire
+- Right Shift: Not used currently
 
-👥 Modèle de données
+### Game Controls
+- R: Reset the game with a new random map
 
-🔹 Joueurs
+## Maps
 
-Chaque joueur possède :
+The game includes several predefined maps:
 
-🔵 Différenciation Joueur 1 / Joueur 2
+1. **Empty Arena**: A simple open area with no obstacles
+2. **Four Corners**: Four large obstacles in each corner of the map
+3. **Central Fortress**: A central fortress with small obstacles in the corners
+4. **Maze**: A maze-like map with vertical and horizontal walls
+5. **Corridors**: A map with corridor-like passages
 
-⚡ Vitesse de rotation & de déplacement
+## How to Play
 
-❤️ Points de vie
+1. Start the game
+2. A random map will be selected
+3. Control your tank to navigate the map
+4. Shoot the other player to reduce their health
+5. The last player standing wins
+6. Press R to reset the game with a new random map
 
-🔫 Puissance & délai de tir
+## Requirements
 
-💨 Vitesse des projectiles
+- Python 3.x
+- Pygame
+- Arduino (optional for joystick controls)
 
-🏆 Scores
+## Installation
 
-Chaque score comprend :
+1. Install Python 3.x
+2. Install Pygame: `pip install pygame`
+3. Install pyserial (for Arduino communication): `pip install pyserial`
+4. Place tank and bullet images in the 'graphics' folder:
+   - green-tank-00.png through green-tank-05.png
+   - red-tank-00.png through red-tank-05.png
+   - bullet.png
 
-👤 Pseudo du joueur
+## Running the Game
 
-🔢 Score obtenu
-
-🛠️ Matériel et Contrôles
-
-🎮 Capteurs d'action :
-
-2 joysticks (1 par joueur)
-
-4 boutons poussoirs (2 par joueur)
-
-🔄 Navigation complète via joystick et boutons
-
-🎯 Déroulement d'une partie
-
-🔄 Les joueurs apparaissent de chaque côté de l'écran
-
-🕹️ Le joystick permet de tourner à 360° et d'avancer
-
-🔫 Un bouton permet de tirer un projectile
-
-🎯 Lorsqu'un projectile touche un joueur, il perd des points de vie
-
-🏁 Fin de partie : quand un joueur n'a plus de points de vie, affichage du gagnant et du score
-
-⚙️ Personnalisation & Options
-
-📊 Modifier les statistiques des joueurs (puissance, vitesse, etc.)
-
-💾 Sauvegarde des données en base de données pour une utilisation future
-
-🔢 Calcul du Score
-
-Le score final dépend de :
-
-🔥 Différence de points de vie
-
-⏳ Temps de la partie
-
-📊 Modifications des statistiques des joueurs
+Run the game with: `python main.py`
