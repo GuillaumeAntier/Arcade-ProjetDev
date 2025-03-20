@@ -1,6 +1,7 @@
 from game import Game
 import pygame
 import sys
+import os
 
 def check_files():
     """Check if all necessary graphic files exist"""
@@ -35,15 +36,26 @@ def check_files():
         print("Please make sure these files exist in the 'graphics' folder.")
         input("Press Enter to continue anyway...")
 
+def check_directories():
+    """Check if required directories exist and create them if they don't"""
+    directories = [
+        "graphics",
+        "static",
+        "static/font",
+        "static/design",
+        "static/music"
+    ]
+    
+    for directory in directories:
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+            print(f"Created '{directory}' directory.")
+
 if __name__ == "__main__":
     print("Starting Tank Battle...")
     
+    check_directories()
     check_files()
-    
-    import os
-    if not os.path.exists("graphics"):
-        os.makedirs("graphics")
-        print("Created 'graphics' directory. Please add required tank and bullet images.")
     
     pygame.init()
     
