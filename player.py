@@ -61,7 +61,7 @@ class Player:
             button_pressed = (self.previous_a_button == 1 and a_button == 0)
             self.previous_a_button = a_button
             
-            if button_pressed and current_time - self.last_shot_time > 500 / self.fire_rate: 
+            if button_pressed and current_time - self.last_shot_time > 200 / self.fire_rate: 
                 self.last_shot_time = current_time
                 
                 rad_angle = math.radians(self.angle - 90)

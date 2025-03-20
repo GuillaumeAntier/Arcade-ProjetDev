@@ -111,7 +111,7 @@ class ScreenManager:
             menu_items = self.get_current_menu_items()
             if len(menu_items) > 0:
                 self.selected_menu_index = (self.selected_menu_index + 1) % len(menu_items)
-                
+            
         elif event.key == pygame.K_UP:
             menu_items = self.get_current_menu_items()
             if len(menu_items) > 0:
