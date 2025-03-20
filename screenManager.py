@@ -29,7 +29,7 @@ class ScreenManager:
             "main_menu": ["Game", "Options", "Tutorial", "Exit"],
             "options": ["Main Volume", "Music Volume", "Back"],
             "tutorial": ["Back"],
-            "pause": ["Resume", "Options", "Main Menu"]
+            "pause": ["Resume", "Options", "Main Menu"],
         }
         self.selected_menu_index = 0
         

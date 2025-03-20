@@ -24,6 +24,7 @@ class Game:
         self.game_over = False
         self.game_over_timer = 0
         self.winner = None
+        self.time_left = 180
         
         pygame.display.set_caption(f"Tank Battle - Map: {self.current_map.name}")
         
@@ -182,6 +183,14 @@ class Game:
 
     def update_game_state(self, clock):
         joystick_data = self.read_joystick()
+
+        self.time_left -= clock.get_time() / 1000
+        if self.time_left <= 0:
+            self.time_left = 0
+            self.game_over = True
+            self.winner = "Time's up!"
+            self.game_over_timer = pygame.time.get_ticks()
+            return
         
         # Check for game over condition
         for i, player in enumerate(self.players):
@@ -236,6 +245,10 @@ class Game:
         
         for player in self.players:
             player.render(self.screen)
+
+        # Display Time Left
+        timer_text = self.font_medium.render(f"Time Left: {int(self.time_left)}", True, (255, 255, 255))
+        self.screen.blit(timer_text, (self.screen.get_width() // 2 - timer_text.get_width() // 2, 10))
         
         # Display map info
         font = pygame.font.SysFont(None, 24)
@@ -243,6 +256,9 @@ class Game:
         self.screen.blit(map_text, (10, 10))
 
     def handle_game_over(self):
+        if not self.scores:
+            self.calculate_scores()
+
         # Check if we should return to main menu
         current_time = pygame.time.get_ticks()
         if current_time - self.game_over_timer > 5000:  # Return to main menu after 5 seconds
@@ -262,7 +278,10 @@ class Game:
         
         # Draw game over message
         game_over_text = self.font_large.render("GAME OVER", True, (255, 0, 0))
-        winner_text = self.font_medium.render(f"{self.winner} Wins!", True, (255, 255, 0))
+        if self.winner == "Time's up!":
+            winner_text = self.font_medium.render("Time's up!", True, (255, 255, 0))
+        else:
+            winner_text = self.font_medium.render(f"{self.winner} Wins!", True, (255, 255, 0))
         return_text = self.font_medium.render("Returning to main menu...", True, (255, 255, 255))
         
         self.screen.blit(game_over_text, 
@@ -274,6 +293,15 @@ class Game:
         self.screen.blit(return_text, 
                         (self.screen.get_width() // 2 - return_text.get_width() // 2, 
                          self.screen.get_height() // 2 + 100))
+        
+        # Display scores
+        if self.winner != "Time's up!":
+            if self.scores and self.winner.startswith("Player"):
+                score_text = self.font_medium.render(f"Score: {self.scores[0]}", True, (255, 255, 255))
+                self.screen.blit(score_text, 
+                                (self.screen.get_width() // 2 - score_text.get_width() // 2, 
+                                self.screen.get_height() // 2 + 300))
+
         
         # Handle any key press to speed up return to main menu
         keys = pygame.key.get_pressed()
@@ -292,9 +320,32 @@ class Game:
         
         self.game_over = False
         self.winner = None
+        self.time_left = 180
+        self.scores = []
         
         pygame.display.set_caption(f"Tank Battle - Map: {self.current_map.name}")
         print(f"New game started. Map: {self.current_map.name}")
+    
+    def calculate_scores(self):
+        """Calcule le score du joueur gagnant en fonction des points de vie restants et du temps restant."""
+        if self.winner and self.winner.startswith("Player"):
+            # Identifier le joueur gagnant
+            winner_id = self.winner.split(" ")[1]  # Extrait l'ID du gagnant (e.g., "1" ou "2")
+            winner_player = next(player for player in self.players if player.id == winner_id)
+            
+            # Score basé sur les points de vie restants
+            health_score = winner_player.health_points * 10  # Chaque point de vie vaut 10 points
+            
+            # Bonus basé sur le temps restant
+            time_bonus = int(self.time_left) * 5  # Chaque seconde restante vaut 5 points
+            
+            # Score total
+            self.scores = [health_score + time_bonus]
+            print(f"Score calculé pour le gagnant (Player {winner_id}) : {self.scores[0]}")
+        else:
+            # Aucun gagnant (par exemple, si le temps est écoulé)
+            self.scores = [0]
+            print("Aucun gagnant, score non calculé.")
 
     def handle_events(self):
         return
