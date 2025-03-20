@@ -74,7 +74,7 @@ class ScreenManager:
             "main_menu": ["Game", "Options", "Tutorial", "Exit"],
             "options": ["Main Volume", "Music Volume", "Back"],
             "tutorial": ["Back"],
-            "pause": ["Resume", "Options", "Main Menu"]
+            "pause": ["Resume", "Options", "Main Menu"],
         }
         
         # Define the option screen items for navigation

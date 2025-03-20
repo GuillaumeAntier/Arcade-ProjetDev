@@ -10,19 +10,22 @@ class Map:
         self.background_color = background_color
         self.obstacles = obstacles if obstacles else []
         self.background_image = None
+        self.bg_tile = None
+        self.tile_size = 128  
         
     def load_background(self, image_path):
         """Load a background image for the map"""
         if os.path.exists(image_path):
-            self.background_image = pygame.image.load(image_path).convert()
-            self.background_image = pygame.transform.scale(self.background_image, (self.width, self.height))
+            self.bg_tile = pygame.image.load(image_path).convert()
         else:
             print(f"Background image not found: {image_path}")
             
     def render(self, screen):
         """Render the map on the screen"""
-        if self.background_image:
-            screen.blit(self.background_image, (0, 0))
+        if self.bg_tile:
+            for y in range(0, self.height, self.tile_size):
+                for x in range(0, self.width, self.tile_size):
+                    screen.blit(self.bg_tile, (x, y))
         else:
             screen.fill(self.background_color)
             
@@ -50,19 +53,28 @@ class Obstacle:
         self.color = color
         self.rect = pygame.Rect(x, y, width, height)
         self.image = None
+        self.tile = None
+        self.tile_size = 64  
         
     def load_image(self, image_path):
         """Load an image for the obstacle"""
         if os.path.exists(image_path):
-            self.image = pygame.image.load(image_path).convert_alpha()
-            self.image = pygame.transform.scale(self.image, (self.width, self.height))
+            self.tile = pygame.image.load(image_path).convert_alpha()
         else:
             print(f"Obstacle image not found: {image_path}")
             
     def render(self, screen):
-        """Render the obstacle on the screen"""
-        if self.image:
-            screen.blit(self.image, (self.x, self.y))
+        """Render the obstacle on the screen with tiled texture"""
+        if self.tile:
+            temp_surface = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
+            
+            for y in range(0, self.height, self.tile_size):
+                for x in range(0, self.width, self.tile_size):
+                    draw_width = min(self.tile_size, self.width - x)
+                    draw_height = min(self.tile_size, self.height - y)
+                    
+                    temp_surface.blit(self.tile.subsurface((0, 0, draw_width, draw_height)), (x, y))
+            screen.blit(temp_surface, (self.x, self.y))
         else:
             pygame.draw.rect(screen, self.color, self.rect)
             
@@ -76,7 +88,25 @@ class MapManager:
     def __init__(self):
         self.maps = []
         self.current_map = None
+        self.stone_wall_texture = None
+        self.grass_texture = None
+        self.load_textures()
         self._create_predefined_maps()
+        
+    def load_textures(self):
+        """Load textures for maps and obstacles"""
+        stone_wall_path = "static/map/stone-wall-texture.png"
+        grass_path = "static/map/grass-texture.png"
+        
+        if os.path.exists(stone_wall_path):
+            self.stone_wall_texture = stone_wall_path
+        else:
+            print(f"Stone wall texture not found: {stone_wall_path}")
+            
+        if os.path.exists(grass_path):
+            self.grass_texture = grass_path
+        else:
+            print(f"Grass texture not found: {grass_path}")
         
     def _create_predefined_maps(self):
         """Create predefined maps"""
@@ -140,7 +170,6 @@ class MapManager:
         ]
         self.maps.append(symmetrical)
         
-        # Scattered map
         scattered = Map("Scattered")
         scattered.obstacles = [
             Obstacle(300, 200, 100, 100),
@@ -154,6 +183,17 @@ class MapManager:
             Obstacle(960, 540, 100, 100)
         ]
         self.maps.append(scattered)
+        
+        self.apply_textures_to_maps()
+        
+    def apply_textures_to_maps(self):
+        """Apply textures to all maps and obstacles"""
+        for map in self.maps:
+            if self.grass_texture:
+                map.load_background(self.grass_texture)
+            if self.stone_wall_texture:
+                for obstacle in map.obstacles:
+                    obstacle.load_image(self.stone_wall_texture)
         
     def select_random_map(self):
         """Select a random map from the predefined maps"""

@@ -54,8 +54,11 @@ class Game:
         self.scores = []
         self.current_screen = "main_menu"
         self.game_over = False
-        self.game_over_timer = 0
+        self.game_over_timer = 5
         self.winner = None
+        self.time_left = 180
+        self.winner_name = ""
+        self.typing_name = False
         
         pygame.display.set_caption(f"Tank Battle - Map: {self.current_map.name}")
         
@@ -197,6 +200,10 @@ class Game:
                             self.board.current_screen = "main_menu"
                         else:
                             running = False
+                
+                # Add this: handle name input when in game over state with typing_name active
+                if self.game_over and self.typing_name:
+                    self.handle_name_input(event)
             
             # Process screens based on the current state
             if self.board.current_screen == "main_menu":
@@ -231,6 +238,14 @@ class Game:
 
     def update_game_state(self, clock):
         joystick_data = self.read_joystick()
+
+        self.time_left -= clock.get_time() / 1000
+        if self.time_left <= 0:
+            self.time_left = 0
+            self.game_over = True
+            self.winner = "Time's up!"
+            self.game_over_timer = pygame.time.get_ticks()
+            return
         
         # Check for game over condition
         for i, player in enumerate(self.players):
@@ -288,6 +303,10 @@ class Game:
         
         for player in self.players:
             player.render(self.screen)
+
+        # Display Time Left
+        timer_text = self.font_medium.render(f"Time Left: {int(self.time_left)}", True, (255, 255, 255))
+        self.screen.blit(timer_text, (self.screen.get_width() // 2 - timer_text.get_width() // 2, 10))
         
         # Display map info
         font = pygame.font.SysFont(None, 24)
@@ -295,43 +314,66 @@ class Game:
         self.screen.blit(map_text, (10, 10))
 
     def handle_game_over(self):
-        # Check if we should return to main menu
+        """Gère la logique de l'écran de fin de partie."""
+        if not self.scores:
+            self.calculate_scores()
+
         current_time = pygame.time.get_ticks()
-        if current_time - self.game_over_timer > 5000:  # Return to main menu after 5 seconds
+        
+        # If name was just entered (typing_name was just set to False)
+        if not self.typing_name and self.winner_name:
+            if current_time - self.game_over_timer > 2000:  # 2 seconds after name entry
+                self.board.current_screen = "main_menu"
+                self.game_over = False
+                self.scores = []
+                return
+        # Regular timeout (if no name was entered)
+        elif current_time - self.game_over_timer > 5000 and not self.typing_name:
             self.board.current_screen = "main_menu"
             self.game_over = False
+            self.scores = []
             return
-        
-        # Continue rendering game state
+
+        if self.winner and self.winner.startswith("Player") and not self.typing_name and not self.winner_name:
+            self.winner_name = ""
+            self.typing_name = True
+
+        self.render_game_over_screen()
+        if self.typing_name:
+            self.render_name_input()
+    
+    def render_game_over_screen(self):
+        """Affiche l'écran de fin de partie avec un overlay et les messages de fin."""
         self.current_map.render(self.screen)
         for player in self.players:
             player.render(self.screen)
-        
-        # Draw semi-transparent overlay
+
         overlay = pygame.Surface((self.screen.get_width(), self.screen.get_height()), pygame.SRCALPHA)
-        overlay.fill((0, 0, 0, 180))  # Semi-transparent black
+        overlay.fill((0, 0, 0, 180))  
         self.screen.blit(overlay, (0, 0))
-        
-        # Draw game over message
+
         game_over_text = self.font_large.render("GAME OVER", True, (255, 0, 0))
-        winner_text = self.font_medium.render(f"{self.winner} Wins!", True, (255, 255, 0))
+        if self.winner == "Time's up!":
+            winner_text = self.font_medium.render("Time's up!", True, (255, 255, 0))
+        else:
+            winner_text = self.font_medium.render(f"{self.winner} Wins!", True, (255, 255, 0))
         return_text = self.font_medium.render("Returning to main menu...", True, (255, 255, 255))
-        
+
         self.screen.blit(game_over_text, 
                         (self.screen.get_width() // 2 - game_over_text.get_width() // 2, 
-                         self.screen.get_height() // 2 - 100))
+                        self.screen.get_height() // 2 - 100))
         self.screen.blit(winner_text, 
                         (self.screen.get_width() // 2 - winner_text.get_width() // 2, 
-                         self.screen.get_height() // 2))
+                        self.screen.get_height() // 2))
         self.screen.blit(return_text, 
                         (self.screen.get_width() // 2 - return_text.get_width() // 2, 
-                         self.screen.get_height() // 2 + 100))
-        
-        # Handle any key press to speed up return to main menu
-        keys = pygame.key.get_pressed()
-        if any(keys) or pygame.mouse.get_pressed()[0]:
-            self.board.current_screen = "main_menu"
-            self.game_over = False
+                        self.screen.get_height() // 2 + 100))
+
+        if self.winner != "Time's up!" and self.scores and self.winner.startswith("Player"):
+            score_text = self.font_medium.render(f"Score: {self.scores[0]}", True, (255, 255, 255))
+            self.screen.blit(score_text, 
+                            (self.screen.get_width() // 2 - score_text.get_width() // 2, 
+                            self.screen.get_height() // 2 + 300))
     
     def reset_game(self):
         # Reset map and players
@@ -346,9 +388,52 @@ class Game:
         
         self.game_over = False
         self.winner = None
+        self.time_left = 180
+        self.scores = []
         
         pygame.display.set_caption(f"Tank Battle - Map: {self.current_map.name}")
         print(f"New game started. Map: {self.current_map.name}")
+    
+    def calculate_scores(self):
+        """Calcule le score du joueur gagnant en fonction des points de vie restants et du temps restant."""
+        if self.winner and self.winner.startswith("Player"):
+            # Identifier le joueur gagnant
+            winner_id = self.winner.split(" ")[1]  # Extrait l'ID du gagnant (e.g., "1" ou "2")
+            winner_player = next(player for player in self.players if player.id == winner_id)
+            
+            # Score basé sur les points de vie restants
+            health_score = winner_player.health_points * 10  # Chaque point de vie vaut 10 points
+            
+            # Bonus basé sur le temps restant
+            time_bonus = int(self.time_left) * 5  # Chaque seconde restante vaut 5 points
+            
+            # Score total
+            self.scores = [health_score + time_bonus]
+            print(f"Score calculé pour le gagnant (Player {winner_id}) : {self.scores[0]}")
+        else:
+            # Aucun gagnant (par exemple, si le temps est écoulé)
+            self.scores = [0]
+            print("Aucun gagnant, score non calculé.")
+    
+    def handle_name_input(self, event):
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_RETURN:  
+                self.typing_name = False  # Changed from typing_name to typing_name
+                print(f"Pseudo enregistré : {self.winner_name}")
+                # Add a delay before returning to main menu
+                self.game_over_timer = pygame.time.get_ticks()
+            elif event.key == pygame.K_BACKSPACE:  
+                self.winner_name = self.winner_name[:-1]
+            else:
+                if len(self.winner_name) < 12:
+                    self.winner_name += event.unicode
+    
+    def render_name_input(self):
+        """Affiche le champ de saisie pour le pseudo du gagnant."""
+        input_text = self.font_medium.render(f"Enter your name: {self.winner_name}", True, (255, 255, 255))
+        self.screen.blit(input_text, 
+                        (self.screen.get_width() // 2 - input_text.get_width() // 2, 
+                        self.screen.get_height() // 2 + 150))
 
     def handle_events(self):
         return
