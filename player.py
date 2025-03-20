@@ -5,15 +5,22 @@ from bullet import Bullet
 
 class Player:
 
-    def __init__(self, id, x=0, y=0):
+    def __init__(self, id, x=0, y=0, settings=None):
         self.id = id
         self.name = ""
+        
+        # Default settings
         self.rotation_speed = 1
         self.movement_speed = 5
         self.health_points = 100
         self.firepower = 10
         self.fire_rate = 1
-        self.bullet_speed = 15 
+        self.bullet_speed = 15
+        
+        # Apply settings if provided
+        if settings:
+            self.apply_settings(settings)
+        
         self.position = [x, y]
         self.angle = 0
         self.tank_surface = self.create_tank_surface()  
@@ -22,6 +29,32 @@ class Player:
         self.hitbox_width = 80 
         self.hitbox_height = 90  
         self.previous_a_button = 1 
+    
+    def apply_settings(self, settings):
+        """Apply settings loaded from the database"""
+        if 'rotation_speed' in settings:
+            self.rotation_speed = settings['rotation_speed']
+        if 'movement_speed' in settings:
+            self.movement_speed = settings['movement_speed']
+        if 'health_points' in settings:
+            self.health_points = settings['health_points']
+        if 'firepower' in settings:
+            self.firepower = settings['firepower']
+        if 'fire_rate' in settings:
+            self.fire_rate = settings['fire_rate']
+        if 'bullet_speed' in settings:
+            self.bullet_speed = settings['bullet_speed']
+    
+    def get_settings(self):
+        """Return the current settings as a dictionary"""
+        return {
+            'rotation_speed': self.rotation_speed,
+            'movement_speed': self.movement_speed,
+            'health_points': self.health_points,
+            'firepower': self.firepower,
+            'fire_rate': self.fire_rate,
+            'bullet_speed': self.bullet_speed
+        }
         
     def create_tank_surface(self):
         layer_images = []

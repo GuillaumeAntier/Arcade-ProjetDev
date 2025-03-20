@@ -2,13 +2,15 @@ import pygame
 import pygame.mixer
 
 class ScreenManager:
-    def __init__(self):
+    def __init__(self, db):
         pygame.init()
         pygame.display.set_caption('Game')
         
         self.screen = pygame.display.set_mode((1920, 1080))
         self.clock = pygame.time.Clock()
         self.running = True
+        
+        self.db = db
         
         self.fonts = {
             'default': pygame.font.Font('./static/font/ThaleahFat.ttf', 40),
@@ -20,10 +22,53 @@ class ScreenManager:
         self.previous_screen = None
         self.is_paused = False
         
-        self.main_volume = 0
-        self.music_volume = 0
+        self.main_volume = 50  # Default to 50%
+        self.music_volume = 50  # Default to 50%
         self.dragging_main = False
         self.dragging_music = False
+        
+        # Initialize player settings
+        self.player_settings = {
+            '1': {
+                'rotation_speed': 50,
+                'movement_speed': 50,
+                'health_points': 100,
+                'firepower': 50,
+                'fire_rate': 50,
+                'bullet_speed': 50
+            },
+            '2': {
+                'rotation_speed': 50,
+                'movement_speed': 50,
+                'health_points': 100,
+                'firepower': 50,
+                'fire_rate': 50,
+                'bullet_speed': 50
+            }
+        }
+        
+        # Player settings slider rects
+        self.player_slider_rects = {
+            '1': {
+                'rotation_speed': pygame.Rect(0, 0, 0, 0),
+                'movement_speed': pygame.Rect(0, 0, 0, 0),
+                'health_points': pygame.Rect(0, 0, 0, 0),
+                'firepower': pygame.Rect(0, 0, 0, 0),
+                'fire_rate': pygame.Rect(0, 0, 0, 0),
+                'bullet_speed': pygame.Rect(0, 0, 0, 0)
+            },
+            '2': {
+                'rotation_speed': pygame.Rect(0, 0, 0, 0),
+                'movement_speed': pygame.Rect(0, 0, 0, 0),
+                'health_points': pygame.Rect(0, 0, 0, 0),
+                'firepower': pygame.Rect(0, 0, 0, 0),
+                'fire_rate': pygame.Rect(0, 0, 0, 0),
+                'bullet_speed': pygame.Rect(0, 0, 0, 0)
+            }
+        }
+        
+        # Track which slider is currently being dragged
+        self.dragging_slider = None
         
         self.menu_configs = {
             "main_menu": ["Game", "Options", "Tutorial", "Exit"],
@@ -31,7 +76,17 @@ class ScreenManager:
             "tutorial": ["Back"],
             "pause": ["Resume", "Options", "Main Menu"]
         }
+        
+        # Define the option screen items for navigation
+        self.options_items = [
+            "Main Volume", "Music Volume", 
+            "P1 Rotation", "P1 Movement", "P1 Health", "P1 Firepower", "P1 Fire Rate", "P1 Bullet Speed",
+            "P2 Rotation", "P2 Movement", "P2 Health", "P2 Firepower", "P2 Fire Rate", "P2 Bullet Speed",
+            "Back"
+        ]
+        
         self.selected_menu_index = 0
+        self.options_selected_index = 0
         
         if pygame.joystick.get_count() > 0:
             self.joystick = pygame.joystick.Joystick(0)
@@ -53,6 +108,8 @@ class ScreenManager:
         self.music_slider_rect = pygame.Rect(0, 0, 0, 0)
         
         self.click = False
+        
+        self.BUTTON_SPACING = 20  # Spacing between buttons
     
     def run(self):
         while self.running:
@@ -73,21 +130,41 @@ class ScreenManager:
                 
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 mx, my = pygame.mouse.get_pos()
+                
+                # Check volume sliders
                 if self.main_slider_rect.collidepoint(mx, my):
                     self.dragging_main = True
-                if self.music_slider_rect.collidepoint(mx, my):
+                    self.dragging_slider = "main"
+                elif self.music_slider_rect.collidepoint(mx, my):
                     self.dragging_music = True
-                    
+                    self.dragging_slider = "music"
+                
+                # Check player settings sliders
+                for player_id in ['1', '2']:
+                    for setting, rect in self.player_slider_rects[player_id].items():
+                        if rect.collidepoint(mx, my):
+                            self.dragging_slider = f"player_{player_id}_{setting}"
+                            
             elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
                 self.dragging_main = False
                 self.dragging_music = False
+                self.dragging_slider = None
                 self.click = True
                 
             elif event.type == pygame.MOUSEMOTION:
-                if self.dragging_main:
-                    self.main_volume = self.update_slider(event.pos[0], 700, 500)
-                if self.dragging_music:
-                    self.music_volume = self.update_slider(event.pos[0], 700, 500)
+                mx, my = pygame.mouse.get_pos()
+                
+                if self.dragging_slider:
+                    if self.dragging_slider == "main":
+                        self.main_volume = self.update_slider(mx, 760, 400)
+                    elif self.dragging_slider == "music":
+                        self.music_volume = self.update_slider(mx, 760, 400)
+                    elif self.dragging_slider.startswith("player_"):
+                        parts = self.dragging_slider.split("_", 2)  
+                        if len(parts) >= 3:
+                            _, player_id, setting = parts
+                            slider_x = 760 if player_id == '1' else 1240
+                            self.player_settings[player_id][setting] = self.update_slider(mx, slider_x, 400)
                     
             elif event.type == pygame.USEREVENT + 1:
                 pygame.mixer.music.play()
@@ -99,6 +176,11 @@ class ScreenManager:
                 self.activate_menu_item()
         
         pygame.mixer.music.set_volume((self.main_volume / 100) * (self.music_volume / 100))
+        
+        # Update player settings based on sliders 
+        for player_id in ['1', '2']:
+            settings = self.player_settings[player_id]
+            self.db.save_settings(self.player_settings)  # Save settings
     
     def handle_key_event(self, event):
         if event.key == pygame.K_ESCAPE:
@@ -106,40 +188,55 @@ class ScreenManager:
                 self.is_paused = not self.is_paused
             elif self.current_screen != "main_menu":
                 self.current_screen = "main_menu"
+                self.selected_menu_index = 0
 
         elif event.key == pygame.K_DOWN:
-            menu_items = self.get_current_menu_items()
-            if len(menu_items) > 0:
-                self.selected_menu_index = (self.selected_menu_index + 1) % len(menu_items)
-            
+            if self.current_screen == "options":
+                self.options_selected_index = (self.options_selected_index + 1) % len(self.options_items)
+            else:
+                menu_items = self.get_current_menu_items()
+                if len(menu_items) > 0:
+                    self.selected_menu_index = (self.selected_menu_index + 1) % len(menu_items)
+                
         elif event.key == pygame.K_UP:
-            menu_items = self.get_current_menu_items()
-            if len(menu_items) > 0:
-                self.selected_menu_index = (self.selected_menu_index - 1) % len(menu_items)
+            if self.current_screen == "options":
+                self.options_selected_index = (self.options_selected_index - 1) % len(self.options_items)
+            else:
+                menu_items = self.get_current_menu_items()
+                if len(menu_items) > 0:
+                    self.selected_menu_index = (self.selected_menu_index - 1) % len(menu_items)
 
         elif event.key == pygame.K_RETURN:
-            self.activate_menu_item()
+            if self.current_screen == "options" and self.options_selected_index == len(self.options_items) - 1:
+                # Back button in options
+                self.current_screen = self.previous_screen or "main_menu"
+                self.selected_menu_index = 0
+            else:
+                self.activate_menu_item()
 
         elif event.key == pygame.K_LEFT:
-            self.adjust_slider(-1)
+            self.adjust_slider(-5)
 
         elif event.key == pygame.K_RIGHT:
-            self.adjust_slider(1)
+            self.adjust_slider(5)
     
     def handle_joystick_motion(self, event):
-        if event.axis == 1:
-            if event.value > 512 + 256:
-                self.selected_menu_index = (self.selected_menu_index + 1) % len(self.get_current_menu_items())
-            elif event.value < 512 - 256:
-                self.selected_menu_index = (self.selected_menu_index - 1) % len(self.get_current_menu_items())
+        if event.axis == 1:  # Vertical axis
+            if event.value > 0.5:  # Down
+                if self.current_screen == "options":
+                    self.options_selected_index = (self.options_selected_index + 1) % len(self.options_items)
+                else:
+                    self.selected_menu_index = (self.selected_menu_index + 1) % len(self.get_current_menu_items())
+            elif event.value < -0.5:  # Up
+                if self.current_screen == "options":
+                    self.options_selected_index = (self.options_selected_index - 1) % len(self.options_items)
+                else:
+                    self.selected_menu_index = (self.selected_menu_index - 1) % len(self.get_current_menu_items())
                 
-        elif event.axis == 0:
-            normalized_value = (event.value - 512) / 512
-            if self.current_screen == "options":
-                if self.selected_menu_index == 0:
-                    self.main_volume = max(0, min(100, self.main_volume + int(normalized_value * 10)))
-                elif self.selected_menu_index == 1:
-                    self.music_volume = max(0, min(100, self.music_volume + int(normalized_value * 10)))
+        elif event.axis == 0:  # Horizontal axis
+            if abs(event.value) > 0.5:
+                normalized_value = event.value * 5  # Adjust sensitivity
+                self.adjust_slider(int(normalized_value))
     
     def get_current_menu_items(self):
         if self.is_paused:
@@ -147,6 +244,12 @@ class ScreenManager:
         return self.menu_configs.get(self.current_screen, [])
     
     def activate_menu_item(self):
+        if self.current_screen == "options":
+            if self.options_selected_index == len(self.options_items) - 1:  # Back button
+                self.current_screen = self.previous_screen or "main_menu"
+                self.selected_menu_index = 0
+            return
+        
         selected_item = self.get_current_menu_items()[self.selected_menu_index]
         
         if self.current_screen == "main_menu":
@@ -156,6 +259,7 @@ class ScreenManager:
             elif selected_item == "Options":
                 self.previous_screen = "main_menu"
                 self.current_screen = "options"
+                self.options_selected_index = 0
             elif selected_item == "Tutorial":
                 self.current_screen = "tutorial"
             elif selected_item == "Exit":
@@ -170,6 +274,7 @@ class ScreenManager:
             elif selected_item == "Options":
                 self.previous_screen = "game"
                 self.current_screen = "options"
+                self.options_selected_index = 0
                 self.is_paused = False
             elif selected_item == "Main Menu":
                 self.current_screen = "main_menu"
@@ -199,12 +304,12 @@ class ScreenManager:
         
         mx, my = pygame.mouse.get_pos()
         buttons = []
-        y_pos = 300
+        y_pos = 300  # Starting position for first button
         
         for i, item in enumerate(self.get_current_menu_items()):
-            button = self.draw_button(item, 800, y_pos, 300, 150, is_hovered=(self.selected_menu_index == i))
+            button = self.draw_button(item, self.screen.get_width() // 2 - 150, y_pos, 300, 150, is_hovered=(self.selected_menu_index == i))
             buttons.append(button)
-            y_pos += 175
+            y_pos += 175 + self.BUTTON_SPACING  # Add spacing between buttons
         
         if self.click:
             for i, button in enumerate(buttons):
@@ -232,7 +337,7 @@ class ScreenManager:
         y_pos = 300
         
         for i, item in enumerate(self.get_current_menu_items()):
-            button = self.draw_button(item, 800, y_pos, 300, 150, is_hovered=(self.selected_menu_index == i))
+            button = self.draw_button(item, self.screen.get_width() // 2 - 150, y_pos, 300, 150, is_hovered=(self.selected_menu_index == i))
             buttons.append(button)
             y_pos += 175
         
@@ -243,29 +348,73 @@ class ScreenManager:
                     self.activate_menu_item()
     
     def draw_options_screen(self):
-        mx, my = pygame.mouse.get_pos()
-        
-        title_text = "Audio"
-        title_rect = self.get_text_rect(title_text, self.screen.get_width() // 2, 150, self.fonts['title'])
+        # Draw title
+        title_text = "Options"
+        title_rect = self.get_text_rect(title_text, self.screen.get_width() // 2, 100, self.fonts['title'])
         self.draw_text(title_text, title_rect.x, title_rect.y, font=self.fonts['title'])
         
-        self.draw_text(f"Master: {self.main_volume}", 700, 275)
-        self.draw_text(f"Music: {self.music_volume}", 700, 525)
+        mx, my = pygame.mouse.get_pos()
         
-        self.main_slider_rect = self.draw_slider(700, 350, 500, 120, self.main_volume, 
-                                                is_hovered=(self.selected_menu_index == 0))
-        self.music_slider_rect = self.draw_slider(700, 600, 500, 120, self.music_volume, 
-                                                 is_hovered=(self.selected_menu_index == 1))
+        # Draw two columns for player settings
+        col1_x = 300
+        col2_x = 1100
+        start_y = 220
+        spacing = 70
         
-        back_button = self.draw_button("Back", 800, 825, 300, 150, 
-                                      is_hovered=(self.selected_menu_index == 2))
+        # Draw audio settings
+        self.draw_text("Audio Settings", col1_x, start_y)
+        self.draw_text(f"Master Volume: {self.main_volume}", col1_x, start_y + spacing)
+        self.main_slider_rect = self.draw_slider(col1_x + 360, start_y + spacing, 400, 20, self.main_volume, 
+                                                 is_hovered=(self.options_selected_index == 0))
         
-        buttons = [self.main_slider_rect, self.music_slider_rect, back_button]
-        if self.click:
-            for i, button in enumerate(buttons):
-                if button.collidepoint(mx, my):
-                    self.selected_menu_index = i
-                    self.activate_menu_item()
+        self.draw_text(f"Music Volume: {self.music_volume}", col1_x, start_y + spacing * 2)
+        self.music_slider_rect = self.draw_slider(col1_x + 360, start_y + spacing * 2, 400, 20, self.music_volume, 
+                                                  is_hovered=(self.options_selected_index == 1))
+        
+        # Draw player 1 settings
+        self.draw_text("Player 1 Settings", col1_x, start_y + spacing * 3)
+        
+        # Player 1 settings
+        settings_y = start_y + spacing * 4
+        for i, (setting, value) in enumerate(self.player_settings['1'].items()):
+            # Format the setting name nicely
+            setting_name = ' '.join(s.capitalize() for s in setting.split('_'))
+            self.draw_text(f"{setting_name}: {value}", col1_x, settings_y + spacing * i)
+            
+            # Draw slider for this setting
+            self.player_slider_rects['1'][setting] = self.draw_slider(
+                col1_x + 360, 
+                settings_y + spacing * i, 
+                400, 20, 
+                value,
+                is_hovered=(self.options_selected_index == 2 + i)
+            )
+        
+        # Draw player 2 settings
+        self.draw_text("Player 2 Settings", col2_x, start_y + spacing * 3)
+        
+        # Player 2 settings
+        for i, (setting, value) in enumerate(self.player_settings['2'].items()):
+            # Format the setting name nicely
+            setting_name = ' '.join(s.capitalize() for s in setting.split('_'))
+            self.draw_text(f"{setting_name}: {value}", col2_x, settings_y + spacing * i)
+            
+            # Draw slider for this setting
+            self.player_slider_rects['2'][setting] = self.draw_slider(
+                col2_x + 360, 
+                settings_y + spacing * i, 
+                400, 20, 
+                value,
+                is_hovered=(self.options_selected_index == 8 + i)
+            )
+        
+        # Draw back button
+        back_button = self.draw_button("Back", self.screen.get_width() // 2 - 150, 900, 300, 100, 
+                                      is_hovered=(self.options_selected_index == len(self.options_items) - 1))
+        
+        if self.click and back_button.collidepoint(mx, my):
+            self.current_screen = self.previous_screen or "main_menu"
+            self.selected_menu_index = 0
     
     def draw_tutorial_screen(self):
         tutorial_text = [
@@ -298,10 +447,10 @@ class ScreenManager:
         y_offset = 350
         for line in tutorial_text:
             self.draw_text(line, 500, y_offset, font=self.fonts['tutorial'])
-            y_offset += 20
+            y_offset += 30  # Increased spacing between lines
         
         mx, my = pygame.mouse.get_pos()
-        back_button = self.draw_button("Back", 800, 825, 300, 150, 
+        back_button = self.draw_button("Back", self.screen.get_width() // 2 - 150, 825, 300, 150, 
                                       is_hovered=(self.selected_menu_index == 0))
         
         if self.click and back_button.collidepoint(mx, my):
@@ -376,36 +525,31 @@ class ScreenManager:
         self.screen.blit(slider_bg, (x, y))
         
         scale_factor = 1.1 if is_hovered else 1.0
-        button_width = int(100 * scale_factor)
-        button_height = int(100 * scale_factor)
+        button_width = int(40 * scale_factor)
+        button_height = int(60 * scale_factor)
         
         slider_button = pygame.transform.scale(
             self.images['slider_button'], 
             (button_width, button_height)
         )
         
-        left_margin = 20
-        right_margin = 20
-        usable_width = width - button_width - left_margin - right_margin
-        slider_x = x + left_margin + int((value / 100) * usable_width)
-        slider_y = y - 20
+        left_margin = 10
+        right_margin = 10
+        usable_width = width - left_margin - right_margin
+        slider_x = x + left_margin + int((value / 100) * usable_width) - button_width // 2
+        slider_y = y - button_height // 2 + height // 2
         
         self.screen.blit(slider_button, (slider_x, slider_y))
         
         return pygame.Rect(slider_x, slider_y, button_width, button_height)
     
     def update_slider(self, mouse_x, slider_x, slider_width):
-        button_width = 100
-        left_margin = 20
-        right_margin = 20
-        usable_width = slider_width - button_width - left_margin - right_margin
+        left_margin = 10
+        right_margin = 10
+        usable_width = slider_width - left_margin - right_margin
         
-        clamped_x = max(
-            slider_x + left_margin, 
-            min(mouse_x, slider_x + slider_width - right_margin - button_width)
-        )
-        
-        relative_x = clamped_x - (slider_x + left_margin)
+        # Calculate position relative to the slider
+        relative_x = max(0, min(mouse_x - (slider_x + left_margin), usable_width))
         new_value = (relative_x / usable_width) * 100
         
         return max(0, min(100, int(new_value)))
@@ -426,7 +570,19 @@ class ScreenManager:
     
     def adjust_slider(self, direction):
         if self.current_screen == "options":
-            if self.selected_menu_index == 0:
-                self.main_volume = max(0, min(100, self.main_volume + direction * 5))
-            elif self.selected_menu_index == 1:
-                self.music_volume = max(0, min(100, self.music_volume + direction * 5))
+            if self.options_selected_index == 0:  # Main volume
+                self.main_volume = max(0, min(100, self.main_volume + direction))
+            elif self.options_selected_index == 1:  # Music volume
+                self.music_volume = max(0, min(100, self.music_volume + direction))
+            elif 2 <= self.options_selected_index <= 7:  # Player 1 settings
+                setting_index = self.options_selected_index - 2
+                setting_keys = list(self.player_settings['1'].keys())
+                if setting_index < len(setting_keys):
+                    setting = setting_keys[setting_index]
+                    self.player_settings['1'][setting] = max(0, min(100, self.player_settings['1'][setting] + direction))
+            elif 8 <= self.options_selected_index <= 13:  # Player 2 settings
+                setting_index = self.options_selected_index - 8
+                setting_keys = list(self.player_settings['2'].keys())
+                if setting_index < len(setting_keys):
+                    setting = setting_keys[setting_index]
+                    self.player_settings['2'][setting] = max(0, min(100, self.player_settings['2'][setting] + direction))
