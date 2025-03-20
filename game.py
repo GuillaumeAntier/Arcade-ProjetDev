@@ -5,19 +5,51 @@ import serial
 import re
 import os
 from map_manager import MapManager
+from database import Database
 
 class Game:
 
     def __init__(self):
         pygame.init()  
         self.screen = pygame.display.set_mode((1920, 1080), pygame.FULLSCREEN) 
-        self.board = ScreenManager()
+        self.db = Database('database.sqlite')
+        self.board = ScreenManager(self.db)
         self.map_manager = MapManager()
         self.current_map = self.map_manager.select_random_map()  
         
+        # Initialize database
+        self.db.create_table("scores", "id INTEGER PRIMARY KEY, player_name TEXT, score INTEGER")
+        
+        # Load player settings
+        self.player_settings = self.db.load_settings()
+        
+        # Initialize default settings if not found in database
+        if '1' not in self.player_settings:
+            self.player_settings['1'] = {
+                'rotation_speed': 1,
+                'movement_speed': 5,
+                'health_points': 100,
+                'firepower': 10,
+                'fire_rate': 1,
+                'bullet_speed': 15
+            }
+        
+        if '2' not in self.player_settings:
+            self.player_settings['2'] = {
+                'rotation_speed': 1,
+                'movement_speed': 5,
+                'health_points': 100,
+                'firepower': 10,
+                'fire_rate': 1,
+                'bullet_speed': 15
+            }
+        
+        # Initialize players with settings
         spawn_points = self.current_map.get_spawn_points()
-        self.players = [Player('1', spawn_points[0][0], spawn_points[0][1]), 
-                        Player('2', spawn_points[1][0], spawn_points[1][1])]
+        self.players = [
+            Player('1', spawn_points[0][0], spawn_points[0][1], self.player_settings['1']), 
+            Player('2', spawn_points[1][0], spawn_points[1][1], self.player_settings['2'])
+        ]
         
         self.scores = []
         self.current_screen = "main_menu"
@@ -40,6 +72,20 @@ class Game:
         # Initialize fonts for game over messages
         self.font_large = pygame.font.SysFont(None, 72)
         self.font_medium = pygame.font.SysFont(None, 48)
+        
+        # Share settings with ScreenManager
+        self.board.player_settings = self.player_settings
+        self.board.on_settings_changed = self.on_settings_changed
+
+    def on_settings_changed(self, settings):
+        """Called when settings are changed in the ScreenManager"""
+        self.player_settings = settings
+        self.db.save_settings(self.player_settings)
+        
+        # Update player settings
+        for player in self.players:
+            if player.id in self.player_settings:
+                player.apply_settings(self.player_settings[player.id])
 
     def read_joystick(self):
         if self.arduino and self.arduino.in_waiting > 0:
@@ -185,6 +231,9 @@ class Game:
             pygame.display.flip()
             clock.tick(60)  # Limit to 60 FPS
         
+        # Save settings before quitting
+        self.db.save_settings(self.player_settings)
+        
         pygame.quit()
 
     def update_game_state(self, clock):
@@ -204,6 +253,9 @@ class Game:
                 self.game_over = True
                 self.winner = "Player " + self.players[1-i].id  # Other player is the winner
                 self.game_over_timer = pygame.time.get_ticks()
+                
+                # Save score to database
+                self.db.save_score(self.winner, 1)
                 return
         
         # Regular game update
@@ -329,8 +381,10 @@ class Game:
         spawn_points = self.current_map.get_spawn_points()
         
         # Reset player positions and states
-        self.players = [Player('1', spawn_points[0][0], spawn_points[0][1]), 
-                        Player('2', spawn_points[1][0], spawn_points[1][1])]
+        self.players = [
+            Player('1', spawn_points[0][0], spawn_points[0][1], self.player_settings['1']), 
+            Player('2', spawn_points[1][0], spawn_points[1][1], self.player_settings['2'])
+        ]
         
         self.game_over = False
         self.winner = None
