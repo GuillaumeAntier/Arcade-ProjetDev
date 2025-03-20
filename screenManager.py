@@ -12,7 +12,6 @@ class ScreenManager:
         
         self.db = db
         
-        # Initialize top scores
         self.top_scores = self.db.get_top_scores(limit=3) 
         print("Scores initiaux:", self.top_scores)  
         
@@ -446,7 +445,7 @@ class ScreenManager:
         y_offset = 350
         for line in tutorial_text:
             self.draw_text(line, 500, y_offset, font=self.fonts['tutorial'])
-            y_offset += 30 
+            y_offset += 20 
         
         mx, my = pygame.mouse.get_pos()
         back_button = self.draw_button("Back", self.screen.get_width() // 2 - 150, 825, 300, 150, 
