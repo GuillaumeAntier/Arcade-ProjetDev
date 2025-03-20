@@ -4,7 +4,6 @@ import sys
 import os
 
 def check_files():
-    """Check if all necessary graphic files exist"""
     import os
     
     required_files = [
@@ -37,7 +36,6 @@ def check_files():
         input("Press Enter to continue anyway...")
 
 def check_directories():
-    """Check if required directories exist and create them if they don't"""
     directories = [
         "graphics",
         "static",

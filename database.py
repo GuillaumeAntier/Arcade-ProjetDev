@@ -6,15 +6,14 @@ class Database:
         self.conn = sqlite3.connect(db_name)
         self.cursor = self.conn.cursor()
         
+        self.create_table("scores", "id INTEGER PRIMARY KEY, player_name TEXT, score INTEGER")
+        self.create_table("player_settings", "player_id TEXT, setting_name TEXT, value REAL, PRIMARY KEY (player_id, setting_name)")
+    
     def create_table(self, table_name, columns):
         self.cursor.execute(f"CREATE TABLE IF NOT EXISTS {table_name} ({columns})")
         self.conn.commit()
     
     def save_settings(self, settings_dict):
-        """
-        Save player settings to the database
-        settings_dict format: {"player_id": id, "setting_name": value, ...}
-        """
         self.cursor.execute("CREATE TABLE IF NOT EXISTS player_settings (player_id TEXT, setting_name TEXT, value REAL, PRIMARY KEY (player_id, setting_name))")
         
         for player_id, settings in settings_dict.items():
@@ -27,11 +26,6 @@ class Database:
         self.conn.commit()
     
     def load_settings(self, player_id=None):
-        """
-        Load player settings from the database
-        If player_id is None, load all settings
-        Returns a dictionary of settings
-        """
         self.cursor.execute("CREATE TABLE IF NOT EXISTS player_settings (player_id TEXT, setting_name TEXT, value REAL, PRIMARY KEY (player_id, setting_name))")
         
         if player_id:
@@ -56,6 +50,6 @@ class Database:
         self.cursor.execute("INSERT INTO scores (player_name, score) VALUES (?, ?)", (player_name, score))
         self.conn.commit()
         
-    def get_top_scores(self, limit=10):
+    def get_top_scores(self, limit=3):
         self.cursor.execute("SELECT player_name, score FROM scores ORDER BY score DESC LIMIT ?", (limit,))
         return self.cursor.fetchall()

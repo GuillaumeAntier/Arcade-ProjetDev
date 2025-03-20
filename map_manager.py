@@ -14,14 +14,12 @@ class Map:
         self.tile_size = 128  
         
     def load_background(self, image_path):
-        """Load a background image for the map"""
         if os.path.exists(image_path):
             self.bg_tile = pygame.image.load(image_path).convert()
         else:
             print(f"Background image not found: {image_path}")
             
     def render(self, screen):
-        """Render the map on the screen"""
         if self.bg_tile:
             for y in range(0, self.height, self.tile_size):
                 for x in range(0, self.width, self.tile_size):
@@ -33,15 +31,13 @@ class Map:
             obstacle.render(screen)
             
     def check_collision(self, position, size):
-        """Check if a position collides with any obstacle"""
         for obstacle in self.obstacles:
             if obstacle.check_collision(position, size):
                 return True
         return False
         
     def get_spawn_points(self):
-        """Return spawn points for players based on the map"""
-        return [(400, 540), (1520, 540)]
+        return [(300, 540), (1520, 540)]
 
 
 class Obstacle:
@@ -57,14 +53,12 @@ class Obstacle:
         self.tile_size = 64  
         
     def load_image(self, image_path):
-        """Load an image for the obstacle"""
         if os.path.exists(image_path):
             self.tile = pygame.image.load(image_path).convert_alpha()
         else:
             print(f"Obstacle image not found: {image_path}")
             
     def render(self, screen):
-        """Render the obstacle on the screen with tiled texture"""
         if self.tile:
             temp_surface = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
             
@@ -79,7 +73,6 @@ class Obstacle:
             pygame.draw.rect(screen, self.color, self.rect)
             
     def check_collision(self, position, size):
-        """Check if a position collides with this obstacle"""
         player_rect = pygame.Rect(position[0] - size[0]/2, position[1] - size[1]/2, size[0], size[1])
         return self.rect.colliderect(player_rect)
 
@@ -94,7 +87,6 @@ class MapManager:
         self._create_predefined_maps()
         
     def load_textures(self):
-        """Load textures for maps and obstacles"""
         stone_wall_path = "static/map/stone-wall-texture.png"
         grass_path = "static/map/grass-texture.png"
         
@@ -109,7 +101,6 @@ class MapManager:
             print(f"Grass texture not found: {grass_path}")
         
     def _create_predefined_maps(self):
-        """Create predefined maps"""
         empty_map = Map("Empty Arena")
         self.maps.append(empty_map)
         
@@ -145,17 +136,6 @@ class MapManager:
         ]
         self.maps.append(maze)
         
-        corridors = Map("Corridors")
-        corridors.obstacles = [
-            Obstacle(0, 300, 1520, 60),
-            Obstacle(400, 700, 1520, 60),
-            Obstacle(800, 0, 60, 250),
-            Obstacle(1200, 400, 60, 250),
-            Obstacle(600, 800, 60, 280),
-            Obstacle(1400, 800, 60, 280)
-        ]
-        self.maps.append(corridors)
-        
         symmetrical = Map("Symmetrical")
         symmetrical.obstacles = [
             Obstacle(910, 440, 100, 200),
@@ -187,7 +167,6 @@ class MapManager:
         self.apply_textures_to_maps()
         
     def apply_textures_to_maps(self):
-        """Apply textures to all maps and obstacles"""
         for map in self.maps:
             if self.grass_texture:
                 map.load_background(self.grass_texture)
@@ -196,12 +175,10 @@ class MapManager:
                     obstacle.load_image(self.stone_wall_texture)
         
     def select_random_map(self):
-        """Select a random map from the predefined maps"""
         self.current_map = random.choice(self.maps)
         return self.current_map
         
     def get_map_by_name(self, name):
-        """Get a map by its name"""
         for map in self.maps:
             if map.name.lower() == name.lower():
                 self.current_map = map

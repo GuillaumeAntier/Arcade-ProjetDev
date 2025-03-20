@@ -12,6 +12,10 @@ class ScreenManager:
         
         self.db = db
         
+        # Initialize top scores
+        self.top_scores = self.db.get_top_scores(limit=3) 
+        print("Scores initiaux:", self.top_scores)  
+        
         self.fonts = {
             'default': pygame.font.Font('./static/font/ThaleahFat.ttf', 40),
             'title': pygame.font.Font('./static/font/ThaleahFat.ttf', 150),
@@ -22,12 +26,11 @@ class ScreenManager:
         self.previous_screen = None
         self.is_paused = False
         
-        self.main_volume = 50  # Default to 50%
-        self.music_volume = 50  # Default to 50%
+        self.main_volume = 50 
+        self.music_volume = 50 
         self.dragging_main = False
         self.dragging_music = False
         
-        # Initialize player settings
         self.player_settings = {
             '1': {
                 'rotation_speed': 50,
@@ -47,7 +50,6 @@ class ScreenManager:
             }
         }
         
-        # Player settings slider rects
         self.player_slider_rects = {
             '1': {
                 'rotation_speed': pygame.Rect(0, 0, 0, 0),
@@ -67,7 +69,6 @@ class ScreenManager:
             }
         }
         
-        # Track which slider is currently being dragged
         self.dragging_slider = None
         
         self.menu_configs = {
@@ -77,7 +78,6 @@ class ScreenManager:
             "pause": ["Resume", "Options", "Main Menu"],
         }
         
-        # Define the option screen items for navigation
         self.options_items = [
             "Main Volume", "Music Volume", 
             "P1 Rotation", "P1 Movement", "P1 Health", "P1 Firepower", "P1 Fire Rate", "P1 Bullet Speed",
@@ -109,7 +109,7 @@ class ScreenManager:
         
         self.click = False
         
-        self.BUTTON_SPACING = 20  # Spacing between buttons
+        self.BUTTON_SPACING = 20  
     
     def run(self):
         while self.running:
@@ -177,10 +177,9 @@ class ScreenManager:
         
         pygame.mixer.music.set_volume((self.main_volume / 100) * (self.music_volume / 100))
         
-        # Update player settings based on sliders 
         for player_id in ['1', '2']:
             settings = self.player_settings[player_id]
-            self.db.save_settings(self.player_settings)  # Save settings
+            self.db.save_settings(self.player_settings) 
     
     def handle_key_event(self, event):
         if event.key == pygame.K_ESCAPE:
@@ -208,7 +207,6 @@ class ScreenManager:
 
         elif event.key == pygame.K_RETURN:
             if self.current_screen == "options" and self.options_selected_index == len(self.options_items) - 1:
-                # Back button in options
                 self.current_screen = self.previous_screen or "main_menu"
                 self.selected_menu_index = 0
             else:
@@ -221,21 +219,21 @@ class ScreenManager:
             self.adjust_slider(5)
     
     def handle_joystick_motion(self, event):
-        if event.axis == 1:  # Vertical axis
-            if event.value > 0.5:  # Down
+        if event.axis == 1: 
+            if event.value > 0.5:  
                 if self.current_screen == "options":
                     self.options_selected_index = (self.options_selected_index + 1) % len(self.options_items)
                 else:
                     self.selected_menu_index = (self.selected_menu_index + 1) % len(self.get_current_menu_items())
-            elif event.value < -0.5:  # Up
+            elif event.value < -0.5: 
                 if self.current_screen == "options":
                     self.options_selected_index = (self.options_selected_index - 1) % len(self.options_items)
                 else:
                     self.selected_menu_index = (self.selected_menu_index - 1) % len(self.get_current_menu_items())
                 
-        elif event.axis == 0:  # Horizontal axis
+        elif event.axis == 0:  
             if abs(event.value) > 0.5:
-                normalized_value = event.value * 5  # Adjust sensitivity
+                normalized_value = event.value * 5  
                 self.adjust_slider(int(normalized_value))
     
     def get_current_menu_items(self):
@@ -245,7 +243,7 @@ class ScreenManager:
     
     def activate_menu_item(self):
         if self.current_screen == "options":
-            if self.options_selected_index == len(self.options_items) - 1:  # Back button
+            if self.options_selected_index == len(self.options_items) - 1: 
                 self.current_screen = self.previous_screen or "main_menu"
                 self.selected_menu_index = 0
             return
@@ -304,13 +302,24 @@ class ScreenManager:
         
         mx, my = pygame.mouse.get_pos()
         buttons = []
-        y_pos = 300  # Starting position for first button
+        y_pos = 300 
         
         for i, item in enumerate(self.get_current_menu_items()):
-            button = self.draw_button(item, self.screen.get_width() // 2 - 150, y_pos, 300, 150, is_hovered=(self.selected_menu_index == i))
+            button = self.draw_button(item, 800, y_pos, 300, 150, is_hovered=(self.selected_menu_index == i))
             buttons.append(button)
-            y_pos += 175 + self.BUTTON_SPACING  # Add spacing between buttons
+            y_pos += 175 + self.BUTTON_SPACING  
+
+        y_pos = 50
         
+        # Afficher le top 3 des scores
+        self.draw_text("Top Scores:", 50, y_pos, font=self.fonts['default']) 
+        y_pos += 50  # Espacement après le titre des scores
+
+        for index, (player_name, score) in enumerate(self.top_scores):
+            score_text = f"{index + 1}. {player_name}: {score}"
+            self.draw_text(score_text, 50, y_pos, font=self.fonts['default'])  
+            y_pos += 30  # Espacement entre les scores
+
         if self.click:
             for i, button in enumerate(buttons):
                 if button.collidepoint(mx, my):
@@ -348,20 +357,17 @@ class ScreenManager:
                     self.activate_menu_item()
     
     def draw_options_screen(self):
-        # Draw title
         title_text = "Options"
         title_rect = self.get_text_rect(title_text, self.screen.get_width() // 2, 100, self.fonts['title'])
         self.draw_text(title_text, title_rect.x, title_rect.y, font=self.fonts['title'])
         
         mx, my = pygame.mouse.get_pos()
         
-        # Draw two columns for player settings
         col1_x = 300
         col2_x = 1100
         start_y = 220
         spacing = 70
         
-        # Draw audio settings
         self.draw_text("Audio Settings", col1_x, start_y)
         self.draw_text(f"Master Volume: {self.main_volume}", col1_x, start_y + spacing)
         self.main_slider_rect = self.draw_slider(col1_x + 360, start_y + spacing, 400, 20, self.main_volume, 
@@ -371,17 +377,13 @@ class ScreenManager:
         self.music_slider_rect = self.draw_slider(col1_x + 360, start_y + spacing * 2, 400, 20, self.music_volume, 
                                                   is_hovered=(self.options_selected_index == 1))
         
-        # Draw player 1 settings
         self.draw_text("Player 1 Settings", col1_x, start_y + spacing * 3)
         
-        # Player 1 settings
         settings_y = start_y + spacing * 4
         for i, (setting, value) in enumerate(self.player_settings['1'].items()):
-            # Format the setting name nicely
             setting_name = ' '.join(s.capitalize() for s in setting.split('_'))
             self.draw_text(f"{setting_name}: {value}", col1_x, settings_y + spacing * i)
             
-            # Draw slider for this setting
             self.player_slider_rects['1'][setting] = self.draw_slider(
                 col1_x + 360, 
                 settings_y + spacing * i, 
@@ -390,10 +392,8 @@ class ScreenManager:
                 is_hovered=(self.options_selected_index == 2 + i)
             )
         
-        # Draw player 2 settings
         self.draw_text("Player 2 Settings", col2_x, start_y + spacing * 3)
         
-        # Player 2 settings
         for i, (setting, value) in enumerate(self.player_settings['2'].items()):
             # Format the setting name nicely
             setting_name = ' '.join(s.capitalize() for s in setting.split('_'))
@@ -408,7 +408,6 @@ class ScreenManager:
                 is_hovered=(self.options_selected_index == 8 + i)
             )
         
-        # Draw back button
         back_button = self.draw_button("Back", self.screen.get_width() // 2 - 150, 900, 300, 100, 
                                       is_hovered=(self.options_selected_index == len(self.options_items) - 1))
         
@@ -447,7 +446,7 @@ class ScreenManager:
         y_offset = 350
         for line in tutorial_text:
             self.draw_text(line, 500, y_offset, font=self.fonts['tutorial'])
-            y_offset += 30  # Increased spacing between lines
+            y_offset += 30 
         
         mx, my = pygame.mouse.get_pos()
         back_button = self.draw_button("Back", self.screen.get_width() // 2 - 150, 825, 300, 150, 
@@ -586,3 +585,8 @@ class ScreenManager:
                 if setting_index < len(setting_keys):
                     setting = setting_keys[setting_index]
                     self.player_settings['2'][setting] = max(0, min(100, self.player_settings['2'][setting] + direction))
+    
+    def refresh_top_scores(self):
+        """Rafraîchir les meilleurs scores depuis la base de données."""
+        self.top_scores = self.db.get_top_scores(limit=3)
+        print("Scores rafraîchis:", self.top_scores)  # Affiche les scores rafraîchis dans la console

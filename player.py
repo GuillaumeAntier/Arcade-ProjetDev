@@ -145,7 +145,6 @@ class Player:
                          not bullet.to_destroy)]
 
     def get_hitbox_points(self):
-        """Retourne les 4 points du rectangle de hitbox après rotation"""
         half_width = self.hitbox_width / 2
         half_height = self.hitbox_height / 2
         
